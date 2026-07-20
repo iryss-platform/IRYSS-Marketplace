@@ -28,6 +28,7 @@
 17. [Week 1 critical path](#17-week-1)
 18. [Risk register](#18-risks)
 19. [Open items](#19-open-items)
+20. [Recommended changes to the locked stack](#20-recommendations)
 
 ---
 
@@ -340,6 +341,15 @@ Earlier sketches in this discussion showed a `stream-in.iryss.com`. That was wro
 
 **Cloudflare proxied (orange cloud) → Full (strict) → Google Cloud Load Balancer → Cloud Run.**
 
+**Why GCLB rather than Cloud Run domain mappings**, since "Cloudflare is already in front, do we need it?" is a fair challenge and the answer is yes:
+
+- Google's own documentation states Cloud Run domain mapping is **"in the preview launch stage"** and **"not production-ready,"** and is not recommended for production due to latency.
+- Domain mappings work in **only 10 regions**, support **no wildcard certificates**, take up to **24 hours** to provision a certificate, and can only map to `/`.
+- **Cloud Armor and IAP attach to the load balancer, not the service** — without a GCLB neither is available.
+- Critically: with a GCLB you set Cloud Run ingress to **"Internal and Cloud Load Balancing."** Without that, clients reach services directly on their default `*.run.app` URLs, **bypassing Cloudflare, the WAF, and every access control**. There is no other way to close that door.
+
+Cost is roughly **$18–20/month** for the first five forwarding rules plus ~$8/TB processed. That is cheap insurance against an open `run.app` back door into admin and API services.
+
 - Cloudflare holds the edge certificate; GCLB holds a Google-managed certificate; the hop between them is TLS-verified.
 - WAF, bot protection, rate limiting and DDoS controls live at Cloudflare.
 - **Cloudflare must not cache** dynamic commerce, account, cart, checkout, admin or API responses (*Technical Stack* §27). Cache rules explicitly bypass `api.`, `admin.`, `brands.`, `resellers.`, `connect.`, `ws.`, and any `/cart`, `/checkout`, `/account` path.
@@ -357,13 +367,17 @@ Three logical databases. Both new-application docs specify a "dedicated PostgreS
 
 | Database | Owner | Contents |
 |---|---|---|
-| `iryss_marketplace` | `packages/api` | Medusa/Mercur core, Payload |
+| `iryss_marketplace` | `packages/api` | Medusa/Mercur core |
+| `iryss_payload` | `payload-cms` | CMS content — **separate database, see below** |
 | `iryss_content` | `content-api` | Channels, videos, playlists, live sessions, Bunny/CF asset refs, analytics rollups |
 | `iryss_connector` | `connector-api` | Store connections, product mappings, sync history, retry/webhook state, errors |
 
+> **CORRECTION to *Technical Stack* §13**, which says Postgres stores "the main operational data for Mercur and, where configured, Payload." **Payload must not share a database with Medusa.** Medusa's own official Payload integration guide provisions a separate `PAYLOAD_DATABASE_URL`. Three concrete hazards: (a) two independent migration systems — Medusa uses MikroORM, Payload uses Drizzle, and Payload's docs warn its `push` mode must not be mixed with manual migrations; (b) table-name collisions — both want `users`, `products`, `orders`, and Payload's docs explicitly warn against overlap; (c) pool contention on a single `max_connections` ceiling. Payload's `schemaName` option exists but is **marked experimental** with a history of bugs. Same *instance* is fine; same *database* is where it breaks.
+
 **Instance topology:**
-- **dev / staging** — one Cloud SQL instance, three databases. Cost efficiency.
-- **production** — `iryss_marketplace` on its own instance; `iryss_content` + `iryss_connector` share a second. Rationale: the marketplace instance carries checkout and must not contend with video-processing or bulk-sync write bursts.
+- **dev / staging** — one Cloud SQL instance, four databases. Cost efficiency.
+- **production** — `iryss_marketplace` + `iryss_payload` on one instance; `iryss_content` + `iryss_connector` on a second. Rationale: the marketplace instance carries checkout and must not contend with video-processing or bulk-sync write bursts.
+- **Production must be regional (HA) with point-in-time recovery enabled.** Neither source document mentions HA, backups or DR. For a system holding orders and payments this is not optional.
 
 **No cross-database joins, ever.** The Content Platform and Connector reach commerce data only through `api.iryss.com`.
 
@@ -378,7 +392,21 @@ Three logical databases. Both new-application docs specify a "dedicated PostgreS
 - Automatic reconnection is mandatory; the platform drops idle connections.
 - If the arithmetic stops working, add **PgBouncer** or Cloud SQL Managed Connection Pooling. Do not raise `max_connections` as the fix.
 
-### 7.3 Cache and queues — Aiven for Valkey
+### 7.3 Cache and queues — Google Memorystore for Valkey
+
+> **CORRECTION to *Technical Stack* §15**, which specifies Aiven for Valkey. **Google Memorystore for Valkey is now GA with a 99.99% SLA**, 1–250 node clusters, zero-downtime scaling, managed backups, cross-region replication and **native Private Service Connect**. Aiven's PSC support on GCP is still labelled **"early availability"**, is per-service, and is unsupported for BYOC. Since every consumer of this cache runs on Cloud Run inside GCP, first-party PSC and a 99.99% SLA outweigh vendor consistency. **Aiven is retained for OpenSearch** (§7.4), where Google has no managed first-party equivalent — so this is not a vendor removal, only a reallocation.
+
+**Medusa v2 needs Redis/Valkey for five distinct purposes, each configured separately.** This is easy to under-provision:
+
+| Purpose | Configuration |
+|---|---|
+| Session store | `projectConfig.redisUrl` — **do not wire `connect-redis` by hand**; Medusa does it internally. Without `redisUrl`, sessions are in-memory and are lost on every Cloud Run scale event. |
+| Cache | `@medusajs/cache-redis` |
+| Event bus | `@medusajs/event-bus-redis` |
+| Workflow engine | `@medusajs/workflow-engine-redis` |
+| Distributed locking | `@medusajs/locking-redis` — **required for multi-instance production.** Neither source document mentions it. Without it, concurrent Cloud Run instances can race on the same workflow. |
+
+> **CORRECTION to *Technical Stack* §16**, which says "the implementation can use `connect-redis`." `connect-redis` is still a dependency of `@medusajs/framework`, but it is wired internally. You set `redisUrl`; you do not install it yourself. Note also that the session connection is **not shared** with the four module connections above — each is configured independently.
 
 Single Valkey cluster, **namespaced by application**, per both new docs' explicit requirement that video and connector jobs not collide with marketplace jobs:
 
@@ -635,7 +663,27 @@ This is the service the original NestJS argument was actually about, now correct
 - Live session state, presence and viewer counts in Valkey under `live:*`.
 - Rate limiting per connection; moderation actions (mute, ban, delete message) available to brand and admin roles.
 
-**VERIFY in Week 1:** Cloud Run's WebSocket behaviour under scale-out and its maximum connection duration, with a real load test. If it proves unsuitable, the fallback is GKE Autopilot for this one service — everything else stays on Cloud Run. Decide this early; it is cheap in Week 1 and expensive in Month 6.
+### 11.4.1 Cloud Run's 60-minute hard cap — a real constraint on live commerce
+
+Verified against Google's documentation, and it is the most serious infrastructure finding after the `.medusa/server` trap:
+
+| Constraint | Reality |
+|---|---|
+| Max request/connection duration | **60 minutes (3600s), hard ceiling.** Default is 5 minutes. WebSockets are treated as ordinary HTTP requests and the connection is **killed at the ceiling regardless of activity.** |
+| Session affinity | **"Best effort" only.** Google states plainly that WebSocket requests "could still potentially end up at different instances." |
+| Billing | Instances with open connections bill **CPU-allocated continuously**. An idle socket still costs money. |
+| HTTP/2 | Must **not** enable end-to-end HTTP/2 on a WebSocket service. |
+
+**What this means concretely: a 90-minute live shopping event will forcibly disconnect every viewer at the 60-minute mark.** Not degrade — disconnect. Any design that assumes a stable socket for the duration of a stream is wrong on Cloud Run.
+
+This is survivable, but only if it is designed for from the first line of code:
+
+1. **Mandatory client auto-reconnect** with backoff and state resync (`reconnecting-websocket` or Socket.IO's built-in handling). Google prescribes this explicitly.
+2. **Zero instance-local state.** Every socket must be able to land on any instance at any moment. Pinned products, chat backlog, presence and viewer counts all live in Valkey; the gateway is stateless. This was already the plan for scale-out — the 60-minute cap makes it non-negotiable rather than merely correct.
+3. **Reconnection must be invisible to the viewer.** The video stream is HLS over plain HTTP and is unaffected; only the overlay drops. Done properly the user sees nothing.
+4. **Test explicitly for it** — a >60-minute live session with product pinning and chat is a required test case, not an edge case.
+
+**VERIFY in Week 1** with a real load test: reconnection behaviour at the cap, Valkey pub/sub fan-out across instances, and cost at expected concurrency. **If reconnect-at-60-minutes proves unacceptable to the business** (long-form live events are core to the format), the fallback is **GKE Autopilot for `content-ws` only** — everything else stays on Cloud Run. Decide in Week 1; it is cheap now and expensive in Month 6.
 
 ### 11.5 Live → VOD
 
@@ -661,6 +709,26 @@ Bunny supplies VOD delivery performance; Cloudflare supplies live delivery perfo
 ## 12. Shopify Connector
 
 NestJS, own Postgres, own BullMQ namespace, plus the embedded Shopify app. Two directions, one application.
+
+### 12.0 The embedded app stack is out of date in the source document
+
+> **CORRECTION to *Connector* §7 and §8**, which specify *"Shopify's official app template, built around **Express, Vite, and React**"* and **Polaris**. That describes `shopify-app-template-node`, which is legacy — its last twelve months of commits are CODEOWNERS churn and Dependabot merges.
+
+Current state, verified against the Shopify repos:
+
+| Template | Status |
+|---|---|
+| `shopify-app-template-react-router` | **Current.** What `shopify app init` scaffolds today. |
+| `shopify-app-template-remix` | Maintained, but its README explicitly redirects to React Router — *"As of React Router v7, Remix and React Router have merged."* |
+| `shopify-app-template-node` (Express/Vite/React) | Effectively abandoned |
+
+**Use `shopify-app-template-react-router`.** Stack: React Router 7+, TypeScript, Vite, Prisma session storage (point it at `iryss_connector`), App Bridge, and **Polaris Web Components**. Server package is `@shopify/shopify-app-react-router`. It ships a Cloud Run deployment guide, which suits us directly.
+
+**Polaris React is deprecated** — `Shopify/polaris-react` was archived read-only, superseded by Polaris Web Components. Existing apps keep working, but new work should not start on the React implementation.
+
+**Next.js was considered and rejected.** There is no official Shopify Next.js template and no first-party adapter; every starter is a community project. Building it in Next.js to match the rest of the estate would mean owning the OAuth, session, webhook and token-exchange plumbing that the React Router template provides free, with no first-party support path. The consistency gain is not worth it for a single embedded app whose scope is deliberately narrow.
+
+This does introduce React Router as a fourth frontend framework alongside Next.js (storefronts), Vite/React (Mercur panels) and the NestJS backends. That is an acceptable, contained cost: the embedded app is small, it lives inside Shopify's admin rather than IRYSS's, and it must follow Shopify's conventions to feel native and to pass app review.
 
 ### 12.1 Boundaries
 
@@ -888,16 +956,20 @@ Week 1 exists to prove assumptions before the build accelerates. Everything belo
 - [ ] Cloud SQL, Valkey, OpenSearch provisioned
 - [ ] Artifact Registry (docker **and npm** repositories)
 - [ ] Cloudflare zone, DNS records per §6, **SSL termination configured per §6.5**
+- [ ] **Set Cloud Run ingress to "Internal and Cloud Load Balancing" on every service** — verify `*.run.app` URLs are unreachable directly (R14)
 - [ ] First Cloud Run deploy of `api-server` + `api-worker`; **measure real cold start** (§2.6b)
 - [ ] Verify worker CPU-always-allocated actually processes scheduled jobs
+- [ ] **Configure all five Medusa Redis purposes** — `redisUrl` plus cache, event bus, workflow engine and **locking** modules (§7.3)
+- [ ] Cloud SQL regional HA + PITR enabled on the production instance; separate `iryss_payload` database created
 
 ### 17.3 Live streaming spike — the highest-unknown item
 
 - [ ] Cloudflare Stream Live account; RTMPS ingest from OBS → HLS playback working
 - [ ] **VERIFY** custom domain support for `live.iryss.com`
 - [ ] **VERIFY** Cloudflare live-to-VOD recording export path into Bunny
-- [ ] **Load-test WebSockets on Cloud Run** — scale-out behaviour, session affinity, max connection duration, Valkey pub/sub fan-out across instances (§11.4). Decide Cloud Run vs GKE Autopilot for `content-ws` **this week**
-- [ ] Confirm Cloudflare Stream Live pricing at expected concurrency
+- [ ] **Load-test WebSockets on Cloud Run** — scale-out, best-effort affinity, Valkey pub/sub fan-out across instances (§11.4)
+- [ ] **Test a >60-minute session explicitly** — confirm reconnection is invisible to the viewer and no state is lost. Decide Cloud Run vs GKE Autopilot for `content-ws` **this week** (§11.4.1)
+- [ ] Confirm Cloudflare Stream Live pricing at expected concurrency, and WebSocket instance cost at expected viewer counts
 
 ### 17.4 External dependencies — start now, they gate everything
 
@@ -927,7 +999,7 @@ Week 1 exists to prove assumptions before the build accelerates. Everything belo
 |---|---|---|---|
 | R1 | `.medusa/server` nested install breaks shared contracts | **Critical** — surfaces at first production deploy of the commerce backend | Publish `@iryss/contracts` (§4.3). **Prove in Week 1.** |
 | R2 | Mercur #909 not actually fixed in pinned version | **Critical** — silent order data loss + refunded captured payments | Week-1 verification with forced inventory conflict (§10.3). Launch blocker if it fails. |
-| R3 | Cloud Run unsuitable for WebSockets at scale | High — live commerce is V1 | Week-1 load test; GKE Autopilot fallback for `content-ws` only (§11.4) |
+| R3 | **Cloud Run's 60-minute hard cap disconnects every live viewer mid-event** | **High — confirmed, not hypothetical.** A 90-minute live shopping event drops all sockets at 60 min | Mandatory client auto-reconnect, zero instance-local state, >60-min test case. GKE Autopilot fallback for `content-ws` only if the business rejects reconnection (§11.4.1) |
 | R4 | 2.2.0 offers model doesn't fit IRYSS brand/reseller workflows | High — reshapes catalogue, Connector and search | Week-1 modelling spike (§10.2) |
 | R5 | Live streaming scope creep past 6–7 weeks | High | Live product pinning, chat and moderation are the V1 line. Vertical reframing, social simulcast, DRM and Whisper stay V2. |
 | R6 | Cloudflare Stream Live pricing at scale | Medium | Model cost at expected concurrency in Week 1; Bunny retains VOD long tail specifically to contain this |
@@ -937,7 +1009,10 @@ Week 1 exists to prove assumptions before the build accelerates. Everything belo
 | R10 | External provider setup becomes critical path | High | All initiated Week 1 (§17.4) |
 | R11 | Contract drift between the three applications | Medium | Single published package, semver, CI gate on stale pins (§13.2) |
 | R12 | Blocks diverge from upstream, losing re-pull benefit | Medium | Keep block-sourced files in identifiable directories; review diffs on re-pull; do not refactor block internals casually |
-| R13 | Always-on worker services cost more than serverless budget assumed | Medium | Five services require `min-instances=1` + no-CPU-throttling (§5). Budget explicitly. |
+| R13 | Always-on worker services cost more than serverless budget assumed | Medium | Five services require `min-instances=1` + no-CPU-throttling (§5). WebSocket instances bill CPU continuously even when idle. Budget explicitly. |
+| R14 | Direct `*.run.app` access bypasses Cloudflare, WAF and all access controls | **High** | Cloud Run ingress set to "Internal and Cloud Load Balancing" on every service; GCLB mandatory (§6.5) |
+| R15 | Payload and Medusa migration systems collide | High if shared DB is adopted | Separate databases from day one (§7.1) |
+| R16 | `@medusajs/locking-redis` omitted → workflow races across Cloud Run instances | High | Configure all five Redis purposes explicitly in Week 1 (§7.3) |
 
 ---
 
@@ -954,13 +1029,75 @@ Every **VERIFY** in this document, collected:
 6. Cloud Run WebSocket max connection duration and scale-out behaviour (§11.4)
 7. Shopify bulk operation concurrency limits on the active API version (§12.2)
 8. Cloud Run worker pools as an alternative to always-on services — no evidence anyone has run a Medusa worker on it (§5)
+9. Aiven for Valkey GCP region coverage — no published per-service region list found (moot if C5 is accepted)
+10. Whether Cloudflare's orange cloud interferes with Google-managed certificate validation for IAP — community sources only, not Google documentation (§6.5)
 
 Decisions still owed by IRYSS, not by engineering:
 
-9. Consent-management provider selection
-10. Transactional email provider selection
-11. Whether Mercur's Enterprise tier is needed, or MIT core suffices
-12. Live streaming moderation policy — who moderates, what the escalation path is, what the legal position is on user-generated live chat in IT/FR
+11. Consent-management provider selection
+12. Transactional email provider selection
+13. Whether Mercur's Enterprise tier is needed, or MIT core suffices
+14. Live streaming moderation policy — who moderates, what the escalation path is, what the legal position is on user-generated live chat in IT/FR
+15. **Is IRYSS spending on paid acquisition at launch?** Determines J1 (server-side GTM) — a ~$200/month decision
+16. **Will live events routinely exceed 60 minutes?** Determines whether reconnection-at-the-cap is acceptable or `content-ws` moves to GKE (§11.4.1)
+
+---
+
+<a name="20-recommendations"></a>
+## 20. Recommended changes to the locked stack
+
+Everything here is a proposed change to *Technical Stack*, which describes itself as "locked." Each is either forced by a verified fact or is a judgement call flagged as such. Ronan asked for exactly this — *"we are open to change if there's a better approach"* — so these are put plainly rather than softened.
+
+### 20.1 Changes forced by verified facts
+
+| # | Change | From → To | Why |
+|---|---|---|---|
+| C1 | Live video vendor | Bunny Stream → **Cloudflare Stream Live** (live) + Bunny (VOD) | Bunny's own FAQ: *"RTMP streams are currently not supported."* Live is impossible on Bunny. (§2.1) |
+| C2 | Mercur adoption | Fork-and-modify → **blocks-native, 2.x** | Fork-and-modify describes 1.x. #909 is unpatched in 1.x with no backport. (§2.2, §2.4) |
+| C3 | Shared contracts | `workspace:*` → **published to Artifact Registry** | `.medusa/server` nested install cannot resolve workspace protocol. Fails in production only. (§4.3) |
+| C4 | Payload database | Shared with Medusa → **own database** | Two migration systems, guaranteed table-name collisions, pool contention. Medusa's own integration guide uses separate databases. (§7.1) |
+| C5 | Valkey provider | Aiven → **Google Memorystore for Valkey** | Memorystore is GA with a 99.99% SLA and native PSC; Aiven's GCP PSC is "early availability." All consumers are inside GCP. Aiven retained for OpenSearch. (§7.3) |
+| C6 | Medusa Redis config | "use `connect-redis`" → **`redisUrl` + four separate modules** | `connect-redis` is wired internally. **`@medusajs/locking-redis` is required for multi-instance** and appears in neither source document. (§7.3) |
+| C7 | Shopify embedded app | Express/Vite/React + Polaris React → **React Router template + Polaris Web Components** | The Express template is effectively abandoned; Polaris React is archived read-only. (§12.0) |
+| C8 | `apps/workers` | Separate application → **`MEDUSA_WORKER_MODE` on the same image** | Medusa's own scaling primitive. One fewer app and Dockerfile. (§4.5) |
+| C9 | Worker deployment | "Cloud Run worker services **or jobs**" → **services only**, `--no-cpu-throttling`, `min-instances=1` | Jobs are run-to-completion; a BullMQ consumer is long-lived. As a Job, scheduled jobs never fire. (§2.6a) |
+| C10 | Cloud SQL | Unspecified → **regional HA + point-in-time recovery** | Neither document mentions HA, backup or DR for a database holding orders and payments. (§7.1) |
+
+### 20.2 Judgement calls — worth deciding, not forced
+
+**J1 — Defer the server-side GTM container until paid acquisition starts.**
+*Technical Stack* §31 includes it from launch. Google's guidance is a minimum of 2 always-on instances at ~$45–50 each, so **$90–150/month, plus log storage that can add $100+/month at scale** — before a single ad is bought.
+
+It is genuinely **not** redundant with PostHog, and the document is right to say so: PostHog is product analytics ingestion, sGTM is a first-party proxy that fans events out to **ad platforms** (Meta CAPI, Google Ads enhanced conversions) for attribution and bid optimisation. PostHog does not do that at all.
+
+But the decision axis is *"are we spending on paid acquisition at launch?"* If not, this is ~$200/month of overhead for a capability with nothing consuming it. The subdomain (`t.iryss.com`), consent plumbing and event taxonomy should all be built in Month 1–2 as planned — only the container is deferred. Standing it up later is an afternoon.
+
+**J2 — Evaluate merging the B2C and B2B storefronts into one application.**
+Currently two Next.js apps on the same backend, same contracts and same design system. PLP, PDP, cart and checkout are largely duplicated; only navigation, gating, pricing behaviour and visibility rules genuinely differ — and those are exactly the things the storefront-context resolver already handles per-`Host` (§9.2). `trade.iryss.com` could resolve to a B2B context in the same way `it.iryss.com` resolves to Italy.
+
+Potential saving: several weeks of Dev 4's time and one deployment target. Risk: if the B2B journeys diverge more than expected, unpicking them later is worse than having built them apart. **Decide in Week 1** once the B2B journey designs are actually in front of us — not by assumption now. Same question applies, more weakly, to Brand and Reseller portals: their *data models* must be separate (both source docs are emphatic and correct), but that does not by itself require two deployments.
+
+**J3 — Drop Zustand unless a concrete need appears.**
+*Technical Stack* §3 lists TanStack Query *and* Zustand. TanStack Query owns server state; React's own state handles the rest. Adding a global store by default invites server state to leak into it, which is the failure mode TanStack Query exists to prevent. Add it when something actually requires it.
+
+**J4 — Consolidate error tracking on Sentry.**
+*Technical Stack* §30 lists Cloud Logging, Cloud Monitoring, Error Reporting **and** Sentry. Error Reporting and Sentry overlap almost entirely for application errors. Suggest: **Sentry for application errors** across all frontends and backends (better grouping, releases, source maps, and it spans the whole estate uniformly); **Cloud Logging/Monitoring for infrastructure** — Cloud Run health, database pressure, queue depth. Skip Error Reporting rather than maintaining two error inboxes nobody reads.
+
+**J5 — Confirm OpenSearch is worth its operational cost at launch.**
+Keeping it, but naming the trade-off. OpenSearch is the right long-term choice — *Technical Stack* §18's "vector-ready semantic discovery foundation" is real, and Meilisearch/Typesense do not offer it. It is also the most operationally demanding component in the stack, and Mercur ships an **Algolia block** out of the box that would work on day one. If search relevance work slips or the cluster becomes a time sink in Month 2, the Algolia block is a credible interim fallback that does not waste the indexing pipeline — the subscribers, jobs and workers are the same shape either way.
+
+### 20.3 Explicitly **not** changed
+
+Worth recording, so it is clear these were considered rather than overlooked:
+
+- **Cloud Run** as the runtime — correct, with the documented exceptions for workers and the open question on `content-ws` (§11.4.1).
+- **Turborepo, TypeScript, Zod, TanStack Query, React Hook Form** — all sound.
+- **PostHog** from launch — right call; behavioural history cannot be backfilled.
+- **Bunny for images and VOD** — correct and cost-effective; only *live* was impossible.
+- **Terraform, Artifact Registry, GitHub Actions, Secret Manager** — standard and correct.
+- **Cloudflare for DNS/WAF with no caching of dynamic commerce** — correct, and §27's warning is well-judged.
+- **Fail-closed storefront context** — the single best decision in the source document. Preserved verbatim.
+- **Vitest/Jest split by package convention** — correct; do not force one runner into `packages/api`.
 
 ---
 
@@ -974,8 +1111,16 @@ Decisions still owed by IRYSS, not by engineering:
 | Stack §2 | `packages/types`, `validation`, `events` | Merged → `packages/contracts`, published | §4.3 |
 | Stack §3 | Fork Mercur, preserve code paths | Blocks-native, `create-mercur-app` root | §2.2 |
 | Stack §3 | Shopify push "disabled or stubbed?" open | Resolved: disabled at launch, portal built in full | §12.5 |
+| Stack §13 | Postgres stores Mercur "and, where configured, Payload" | Payload gets its **own database** | §7.1 |
+| Stack §15 | Aiven for Valkey | **Google Memorystore for Valkey**; Aiven kept for OpenSearch | §7.3 |
+| Stack §16 | "can use `connect-redis`" | `projectConfig.redisUrl` + four separate Redis modules incl. **locking** | §7.3 |
+| Stack §17 | Workers as "Cloud Run worker services **or jobs**" | **Services only**, `--no-cpu-throttling`, `min-instances=1` | §2.6a |
 | Stack §20 | Bunny for media | Bunny VOD + **Cloudflare Stream Live** | §2.1 |
-| Stack §27 | SSL termination "must be decided" | Decided: CF proxied → Full (strict) → GCLB | §6.5 |
+| Stack §27 | SSL termination "must be decided" | Decided: CF proxied → Full (strict) → GCLB, ingress locked to LB | §6.5 |
+| Stack §30 | Cloud Error Reporting **and** Sentry | Sentry for app errors; Cloud for infra (J4) | §20.2 |
+| Stack §31 | Server-side GTM from launch | **Deferred** until paid acquisition; plumbing built (J1) | §20.2 |
+| Connector §8 | Shopify template "Express, Vite, React" + Polaris | **React Router template** + Polaris Web Components | §12.0 |
+| — | No HA/backup/DR specified | Regional HA + PITR on production Cloud SQL | §7.1 |
 | Content §6 | Bunny Stream for video | Bunny VOD only; Cloudflare for live | §2.1 |
 | Content §10 | Live streaming = V2 | Live streaming = **V1, shoppable** | D1 |
 | Content §11 | V1 = 2.5–3 weeks | V1 + live = 6–7 weeks | §11.8 |
