@@ -200,7 +200,7 @@ iryss-platform/                     ← single git repo, single Turborepo
 │   │     src/api/  src/worker/  src/ws-gateway/
 │   ├── shopify-connector/          ← NestJS
 │   │     src/api/  src/worker/
-│   └── shopify-embedded-app/       ← Shopify official template (Express/Vite/React + Polaris)
+│   └── shopify-embedded-app/       ← Shopify React Router template + Polaris Web Components
 │
 └── infrastructure/                 ← Terraform
       environments/{dev,staging,prod}/
