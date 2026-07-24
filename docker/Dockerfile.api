@@ -34,4 +34,4 @@ RUN echo "require('ts-node').register({transpileOnly:true,compilerOptions:{modul
 ENV HOST=0.0.0.0
 EXPOSE 9000
 
-CMD ["sh", "-c", "npx medusa db:migrate && npx medusa develop"]
+CMD ["npx", "medusa", "develop"]
