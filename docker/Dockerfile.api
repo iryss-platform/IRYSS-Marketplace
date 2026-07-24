@@ -28,4 +28,4 @@ COPY . .
 EXPOSE 9000
 
 WORKDIR /app/packages/api
-CMD ["npx", "medusa", "start"]
+CMD ["npx", "medusa", "develop", "--no-browser"]
