@@ -1,0 +1,16 @@
+{
+  "name": "@iryss/config",
+  "version": "0.1.0",
+  "description": "Environment loading and Zod validation for IRYSS services",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "check-types": "tsc --noEmit"
+  },
+  "dependencies": {
+    "zod": "3.25.76"
+  },
+  "devDependencies": {
+    "typescript": "5.9.3"
+  }
+}

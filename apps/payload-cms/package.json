@@ -1,0 +1,29 @@
+{
+  "name": "@iryss/payload-cms",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "cross-env PAYLOAD_CONFIG_PATH=src/payload.config.ts nodemon",
+    "build": "cross-env PAYLOAD_CONFIG_PATH=src/payload.config.ts payload build",
+    "start": "cross-env PAYLOAD_CONFIG_PATH=dist/payload.config.js node dist/server.js",
+    "generate:types": "cross-env PAYLOAD_CONFIG_PATH=src/payload.config.ts payload generate:types",
+    "clean": "rm -rf dist build"
+  },
+  "dependencies": {
+    "payload": "^3.0.0",
+    "@payloadcms/db-postgres": "^3.0.0",
+    "@payloadcms/richtext-lexical": "^3.0.0",
+    "@payloadcms/next": "^3.0.0",
+    "cross-env": "^7.0.3",
+    "dotenv": "^16.4.5",
+    "next": "^15.3.3",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "sharp": "^0.33.5"
+  },
+  "devDependencies": {
+    "@types/node": "^20.12.11",
+    "nodemon": "^3.1.4",
+    "typescript": "5.9.3"
+  }
+}

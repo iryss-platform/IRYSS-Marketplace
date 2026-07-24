@@ -1,0 +1,18 @@
+{
+  "name": "@iryss/contracts",
+  "version": "0.1.0",
+  "description": "Shared types, Zod schemas, and event taxonomy for the IRYSS platform",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "clean": "rm -rf dist",
+    "check-types": "tsc --noEmit"
+  },
+  "dependencies": {
+    "zod": "3.25.76"
+  },
+  "devDependencies": {
+    "typescript": "5.9.3"
+  }
+}
