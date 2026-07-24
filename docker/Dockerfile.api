@@ -27,10 +27,8 @@ COPY . .
 
 WORKDIR /app/packages/api
 
-# Compile medusa-config.ts to .js so Medusa can load it without ts-node
-RUN npx tsc medusa-config.ts --esModuleInterop --module commonjs --moduleResolution node --skipLibCheck --outDir . 2>/dev/null || true
-# Fallback: if tsc fails, create a JS wrapper that uses ts-node
-RUN test -f medusa-config.js || echo "require('ts-node').register({transpileOnly:true});module.exports=require('./medusa-config.ts');" > medusa-config.js
+# Install ts-node globally so medusa can load .ts config files
+RUN npm install -g ts-node typescript
 
 ENV HOST=0.0.0.0
 EXPOSE 9000
