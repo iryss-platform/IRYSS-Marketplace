@@ -5,6 +5,7 @@ RUN apk add --no-cache python3 make g++ curl
 
 WORKDIR /app
 
+# Copy all package.json files for workspace install
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml .npmrc ./
 COPY packages/api/package.json packages/api/
 COPY packages/contracts/package.json packages/contracts/
@@ -27,15 +28,22 @@ COPY . .
 
 WORKDIR /app/packages/api
 
-# Create medusa-config.js bridge for ts-node loading
-RUN echo "require('ts-node').register({transpileOnly:true,compilerOptions:{module:'commonjs',moduleResolution:'node'}});module.exports=require('./medusa-config.ts');" > medusa-config.js
+# Build admin and vendor panels
+ARG MERCUR_BACKEND_URL
+ARG VITE_MERCUR_BACKEND_URL
+ENV MERCUR_BACKEND_URL=${MERCUR_BACKEND_URL}
+ENV VITE_MERCUR_BACKEND_URL=${VITE_MERCUR_BACKEND_URL:-$MERCUR_BACKEND_URL}
 
-# Build admin and vendor panels (required for dashboards to work)
-RUN cd /app/apps/admin && npx vite build 2>&1 || echo "Admin build warning (non-fatal)"
-RUN cd /app/apps/vendor && npx vite build 2>&1 || echo "Vendor build warning (non-fatal)"
+RUN cd /app/apps/admin && pnpm build
+RUN cd /app/apps/vendor && pnpm build
 
+# Run medusa build (compiles API + bundles dashboards)
+RUN pnpm build
+
+# Production runtime
 ENV HOST=0.0.0.0
-ENV MERCUR_BACKEND_URL=http://api.iryss.com
-ENV VITE_MERCUR_BACKEND_URL=http://api.iryss.com
+ENV NODE_ENV=production
 EXPOSE 9000
-CMD ["npx", "medusa", "develop"]
+
+# Start from the built artifact
+CMD ["sh", "-c", "cd .medusa/server && npm install --production 2>/dev/null; cd /app/packages/api && npx medusa start"]

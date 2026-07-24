@@ -44,6 +44,31 @@ module.exports = withMercur({
       },
     },
     {
+      resolve: '@medusajs/medusa/cache-redis',
+      options: { redisUrl: REDIS_URL },
+    },
+    {
+      resolve: '@medusajs/medusa/event-bus-redis',
+      options: { redisUrl: REDIS_URL },
+    },
+    {
+      resolve: '@medusajs/medusa/workflow-engine-redis',
+      options: { redis: { url: REDIS_URL } },
+    },
+    {
+      resolve: '@medusajs/medusa/locking',
+      options: {
+        providers: [
+          {
+            resolve: '@medusajs/medusa/locking-redis',
+            id: 'locking-redis',
+            is_default: true,
+            options: { redisUrl: REDIS_URL },
+          },
+        ],
+      },
+    },
+    {
       resolve: '@medusajs/medusa/file',
       options: {
         providers: [
