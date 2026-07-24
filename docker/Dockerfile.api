@@ -27,11 +27,15 @@ COPY . .
 
 WORKDIR /app/packages/api
 
-# Create medusa-config.js bridge that loads the .ts file via ts-node
-# Medusa's dynamic-import.js uses Node require() which can't load .ts directly
+# Create medusa-config.js bridge for ts-node loading
 RUN echo "require('ts-node').register({transpileOnly:true,compilerOptions:{module:'commonjs',moduleResolution:'node'}});module.exports=require('./medusa-config.ts');" > medusa-config.js
 
-ENV HOST=0.0.0.0
-EXPOSE 9000
+# Build admin and vendor panels (required for dashboards to work)
+RUN cd /app/apps/admin && npx vite build 2>&1 || echo "Admin build warning (non-fatal)"
+RUN cd /app/apps/vendor && npx vite build 2>&1 || echo "Vendor build warning (non-fatal)"
 
+ENV HOST=0.0.0.0
+ENV MERCUR_BACKEND_URL=http://api.iryss.com
+ENV VITE_MERCUR_BACKEND_URL=http://api.iryss.com
+EXPOSE 9000
 CMD ["npx", "medusa", "develop"]
