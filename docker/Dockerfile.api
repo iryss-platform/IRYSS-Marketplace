@@ -33,4 +33,6 @@ RUN echo "require('ts-node').register({transpileOnly:true,compilerOptions:{modul
 
 ENV HOST=0.0.0.0
 EXPOSE 9000
-CMD ["npx", "medusa", "develop"]
+
+# Run migrations then start (inline script avoids CRLF issues)
+CMD ["sh", "-c", "npx medusa db:migrate && npx medusa develop"]
