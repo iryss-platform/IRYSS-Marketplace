@@ -28,4 +28,5 @@ COPY . .
 EXPOSE 9000
 
 WORKDIR /app/packages/api
-CMD ["npx", "medusa", "develop", "--no-browser"]
+ENV HOST=0.0.0.0
+CMD ["npx", "medusa", "develop"]
