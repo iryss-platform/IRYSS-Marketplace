@@ -1,4 +1,4 @@
-FROM node:20-alpine AS builder
+FROM node:20-alpine
 
 RUN corepack enable && corepack prepare pnpm@9.12.3 --activate
 RUN apk add --no-cache python3 make g++ curl
@@ -22,44 +22,26 @@ COPY apps/payload-cms/package.json apps/payload-cms/
 COPY apps/content-platform/package.json apps/content-platform/
 COPY apps/shopify-connector/package.json apps/shopify-connector/
 
-# Install ALL deps (including dev) — needed to build admin/vendor panels
+# Install ALL deps (dev deps needed for panel builds)
 ENV NODE_ENV=development
 RUN pnpm install --frozen-lockfile
 
-# Copy all source
 COPY . .
 
-# Create medusa-config.js bridge for ts-node
-WORKDIR /app/packages/api
-RUN echo "require('ts-node').register({transpileOnly:true,compilerOptions:{module:'commonjs',moduleResolution:'node'}});module.exports=require('./medusa-config.ts');" > medusa-config.js
-
-# Build admin panel
-ARG MERCUR_BACKEND_URL=http://localhost:9000
-ARG VITE_MERCUR_BACKEND_URL
+# Build admin and vendor panels (produces apps/admin/dist and apps/vendor/dist)
+ARG MERCUR_BACKEND_URL=https://api.iryss.com
 ENV MERCUR_BACKEND_URL=${MERCUR_BACKEND_URL}
-ENV VITE_MERCUR_BACKEND_URL=${VITE_MERCUR_BACKEND_URL:-$MERCUR_BACKEND_URL}
+ENV VITE_MERCUR_BACKEND_URL=${MERCUR_BACKEND_URL}
 RUN cd /app/apps/admin && npx vite build
 RUN cd /app/apps/vendor && npx vite build
 
-# Build medusa (compiles API + bundles dashboards into .medusa/server/)
-ENV NODE_ENV=production
-RUN pnpm build
-
-# Production runtime
-FROM node:20-alpine
-RUN apk add --no-cache curl
+# medusa develop serves panels from apps/admin/dist and apps/vendor/dist
 WORKDIR /app/packages/api
 
-# Copy the built medusa artifact
-COPY --from=builder /app/packages/api/.medusa ./.medusa
-COPY --from=builder /app/packages/api/package.json ./package.json
-COPY --from=builder /app/packages/api/medusa-config.js ./medusa-config.js
-COPY --from=builder /app/packages/api/medusa-config.ts ./medusa-config.ts
-
-# Install production deps in the artifact
-RUN cd .medusa/server && npm install --production 2>/dev/null; exit 0
+# ts-node as direct dep for config loading
+RUN echo "require('ts-node').register({transpileOnly:true,compilerOptions:{module:'commonjs',moduleResolution:'node'}});module.exports=require('./medusa-config.ts');" > medusa-config.js
 
 ENV HOST=0.0.0.0
 ENV NODE_ENV=production
 EXPOSE 9000
-CMD ["npm", "run", "start"]
+CMD ["npx", "medusa", "develop"]
