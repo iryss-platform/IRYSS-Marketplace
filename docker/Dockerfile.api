@@ -27,8 +27,10 @@ COPY . .
 
 WORKDIR /app/packages/api
 
-# Install ts-node globally so medusa can load .ts config files
-RUN npm install -g ts-node typescript
+# Create medusa-config.js bridge that loads the .ts file via ts-node
+# Medusa's dynamic-import.js uses Node require() which can't load .ts directly
+RUN npm install -g ts-node typescript && \
+    echo "require('ts-node').register({transpileOnly:true,compilerOptions:{module:'commonjs',moduleResolution:'node'}});module.exports=require('./medusa-config.ts');" > medusa-config.js
 
 ENV HOST=0.0.0.0
 EXPOSE 9000
