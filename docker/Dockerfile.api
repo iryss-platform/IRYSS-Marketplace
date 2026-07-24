@@ -1,47 +1,31 @@
-FROM node:20-alpine AS base
+FROM node:20-alpine
+
 RUN corepack enable && corepack prepare pnpm@9.12.3 --activate
 RUN apk add --no-cache python3 make g++
+
 WORKDIR /app
 
-FROM base AS deps
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml .npmrc ./
-COPY packages/api/package.json packages/api/package.json
-COPY packages/contracts/package.json packages/contracts/package.json
-COPY apps/admin/package.json apps/admin/package.json
-COPY apps/vendor/package.json apps/vendor/package.json
-COPY packages/ui/package.json packages/ui/package.json
-COPY packages/config/package.json packages/config/package.json
-COPY packages/api-client/package.json packages/api-client/package.json
-COPY packages/test-utils/package.json packages/test-utils/package.json
-COPY apps/b2c-storefront/package.json apps/b2c-storefront/package.json
-COPY apps/b2b-storefront/package.json apps/b2b-storefront/package.json
-COPY apps/reseller-portal/package.json apps/reseller-portal/package.json
-COPY apps/payload-cms/package.json apps/payload-cms/package.json
-COPY apps/content-platform/package.json apps/content-platform/package.json
-COPY apps/shopify-connector/package.json apps/shopify-connector/package.json
+COPY packages/api/package.json packages/api/
+COPY packages/contracts/package.json packages/contracts/
+COPY packages/ui/package.json packages/ui/
+COPY packages/config/package.json packages/config/
+COPY packages/api-client/package.json packages/api-client/
+COPY packages/test-utils/package.json packages/test-utils/
+COPY apps/admin/package.json apps/admin/
+COPY apps/vendor/package.json apps/vendor/
+COPY apps/b2c-storefront/package.json apps/b2c-storefront/
+COPY apps/b2b-storefront/package.json apps/b2b-storefront/
+COPY apps/reseller-portal/package.json apps/reseller-portal/
+COPY apps/payload-cms/package.json apps/payload-cms/
+COPY apps/content-platform/package.json apps/content-platform/
+COPY apps/shopify-connector/package.json apps/shopify-connector/
+
 RUN pnpm install --frozen-lockfile
 
-FROM base AS builder
-COPY --from=deps /app ./
 COPY . .
 
-ENV NODE_ENV=production
-ENV VITE_MERCUR_BACKEND_URL=""
-RUN pnpm --filter @iryss/admin build || true
-RUN pnpm --filter @iryss/vendor build || true
-RUN cd packages/api && pnpm build
-
-FROM node:20-alpine AS runner
-RUN apk add --no-cache python3 make g++
-WORKDIR /app/packages/api
-ENV NODE_ENV=production
-
-COPY --from=builder /app/packages/api/.medusa ./.medusa
-COPY --from=builder /app/packages/api/package.json ./package.json
-COPY --from=builder /app/packages/api/medusa-config.ts ./medusa-config.ts
-COPY --from=builder /app/packages/api/scripts ./scripts
-
-RUN cd .medusa/server && npm install --production --ignore-scripts 2>/dev/null; exit 0
-
 EXPOSE 9000
+
+WORKDIR /app/packages/api
 CMD ["npx", "medusa", "start"]
