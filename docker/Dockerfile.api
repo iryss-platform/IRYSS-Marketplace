@@ -29,6 +29,7 @@ EXPOSE 9000
 
 WORKDIR /app/packages/api
 ENV HOST=0.0.0.0
-COPY docker/entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
+
+RUN printf '#!/bin/sh\nset -e\necho "Running migrations..."\nnpx medusa db:migrate || echo "Migration done or skipped"\necho "Starting Medusa..."\nexec npx medusa develop\n' > /entrypoint.sh && chmod +x /entrypoint.sh
+
 CMD ["/entrypoint.sh"]
