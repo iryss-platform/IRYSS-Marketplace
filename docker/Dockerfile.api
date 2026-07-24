@@ -25,11 +25,11 @@ RUN pnpm install --frozen-lockfile
 
 COPY . .
 
-EXPOSE 9000
-
 WORKDIR /app/packages/api
 ENV HOST=0.0.0.0
 
-RUN printf '#!/bin/sh\nset -e\necho "Running migrations..."\nnpx medusa db:migrate || echo "Migration done or skipped"\necho "Starting Medusa..."\nexec npx medusa develop\n' > /entrypoint.sh && chmod +x /entrypoint.sh
+HEALTHCHECK --interval=30s --timeout=10s --start-period=120s --retries=10 \
+  CMD curl -f http://localhost:9000/health || exit 1
 
-CMD ["/entrypoint.sh"]
+EXPOSE 9000
+CMD ["npx", "medusa", "develop"]
