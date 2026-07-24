@@ -34,7 +34,7 @@ iryss-platform/
 | Tool | Version | Install |
 |---|---|---|
 | **Node.js** | 20 LTS | [nodejs.org](https://nodejs.org/) or `nvm install 20` |
-| **pnpm** | 9.x | `npm install -g pnpm@9` |
+| **Bun** | 1.3+ | [bun.sh](https://bun.sh/) or `curl -fsSL https://bun.sh/install \| bash` |
 | **Docker** | Latest | [docker.com](https://www.docker.com/) |
 | **PostgreSQL** | 15+ | Via Docker or local install |
 | **Redis/Valkey** | 7+ | Via Docker or local install |
@@ -44,7 +44,7 @@ iryss-platform/
 ### 1. Install dependencies
 
 ```bash
-pnpm install
+bun install
 ```
 
 ### 2. Start infrastructure (PostgreSQL + Redis)
@@ -53,7 +53,9 @@ pnpm install
 docker compose up -d
 ```
 
-Or manually ensure PostgreSQL is running on `localhost:5432` and Redis on `localhost:6379`.
+This starts PostgreSQL on **port 5433** (to avoid conflicts with existing PostgreSQL on 5432).
+
+**Redis:** If you have [Memurai](https://www.memurai.com/) installed (Windows Redis-compatible server), it runs on `localhost:6379` by default — no Docker Redis needed. The API is already configured to use `localhost:6379`.
 
 ### 3. Configure environment
 
@@ -70,8 +72,8 @@ cp apps/payload-cms/.env.example apps/payload-cms/.env
 ```bash
 # Run Medusa migrations
 cd packages/api
-pnpm db:migrate
-pnpm seed
+bun run db:migrate
+bun run seed
 cd ../..
 ```
 
@@ -79,18 +81,18 @@ cd ../..
 
 ```bash
 # Start everything
-pnpm dev
+bun run dev
 
 # Or start specific services
-pnpm dev:api          # Medusa API only (port 9000)
-pnpm dev:admin        # Admin Portal + API (ports 7000 + 9000)
-pnpm dev:vendor       # Brand Portal + API (ports 7001 + 9000)
-pnpm dev:b2c          # B2C Storefront (port 3000)
-pnpm dev:b2b          # B2B Storefront (port 3001)
-pnpm dev:reseller     # Reseller Portal (port 3002)
-pnpm dev:payload      # Payload CMS (port 3003)
-pnpm dev:content      # Content Platform (port 4000)
-pnpm dev:connector    # Shopify Connector (port 4001)
+bun run dev:api          # Medusa API only (port 9000)
+bun run dev:admin        # Admin Portal + API (ports 7000 + 9000)
+bun run dev:vendor       # Brand Portal + API (ports 7001 + 9000)
+bun run dev:b2c          # B2C Storefront (port 3000)
+bun run dev:b2b          # B2B Storefront (port 3001)
+bun run dev:reseller     # Reseller Portal (port 3002)
+bun run dev:payload      # Payload CMS (port 3003)
+bun run dev:content      # Content Platform (port 4000)
+bun run dev:connector    # Shopify Connector (port 4001)
 ```
 
 ## Service URLs (Development)
@@ -212,22 +214,22 @@ The PIM and CMS for product onboarding and content management:
 
 ```bash
 # Build all packages and apps
-pnpm build
+bun run build
 
 # Run linting across the workspace
-pnpm lint
+bun run lint
 
 # Type-check all packages
-pnpm check-types
+bun run check-types
 
 # Run tests
-pnpm test
+bun run test
 
 # Format code
-pnpm format
+bun run format
 
 # Clean all build artifacts
-pnpm clean
+bun run clean
 ```
 
 ## Mercur Blocks

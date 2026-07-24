@@ -1,0 +1,24 @@
+FROM node:20-alpine AS base
+RUN corepack enable && corepack prepare pnpm@9.12.3 --activate
+WORKDIR /app
+
+FROM base AS deps
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml .npmrc ./
+COPY apps/b2c-storefront/package.json apps/b2c-storefront/
+RUN pnpm install --frozen-lockfile --filter @iryss/b2c-storefront
+
+FROM base AS builder
+COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/apps/b2c-storefront/node_modules ./apps/b2c-storefront/node_modules
+COPY . .
+RUN pnpm --filter @iryss/b2c-storefront build
+
+FROM node:20-alpine AS runner
+WORKDIR /app
+ENV NODE_ENV=production
+COPY --from=builder /app/apps/b2c-storefront/.next/standalone ./
+COPY --from=builder /app/apps/b2c-storefront/.next/static ./apps/b2c-storefront/.next/static
+COPY --from=builder /app/apps/b2c-storefront/public ./apps/b2c-storefront/public
+
+EXPOSE 3000
+CMD ["node", "apps/b2c-storefront/server.js"]

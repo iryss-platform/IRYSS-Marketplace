@@ -2,6 +2,10 @@
   "name": "iryss-platform",
   "private": true,
   "packageManager": "pnpm@9.12.3",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
   "scripts": {
     "build": "turbo run build",
     "dev": "turbo run dev",
@@ -41,22 +45,22 @@
     "react-jwt": "2.1.1"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.1",
+    "@types/jsonwebtoken": "^9.0.9",
     "@types/react": "^18.3.2",
     "@types/react-dom": "^18.2.25",
-    "@types/jsonwebtoken": "^9.0.9",
     "@vitejs/plugin-react": "^5.2.0",
     "esbuild": "^0.21.5",
-    "vite": "^5.4.21",
     "eslint": "^9.39.1",
-    "@eslint/js": "^9.39.1",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.4.24",
     "globals": "^16.5.0",
-    "typescript-eslint": "^8.46.4",
     "prettier": "^3.7.4",
     "ts-node": "^10.9.2",
-    "turbo": "^2.7.4",
-    "typescript": "5.9.3"
+    "turbo": "^2.10.6",
+    "typescript": "5.9.3",
+    "typescript-eslint": "^8.46.4",
+    "vite": "^5.4.21"
   },
   "engines": {
     "node": ">=20"

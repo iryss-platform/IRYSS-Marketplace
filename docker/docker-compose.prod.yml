@@ -1,0 +1,98 @@
+services:
+  postgres:
+    image: postgres:15-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-iryss}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
+    volumes:
+      - iryss_pg_data:/var/lib/postgresql/data
+      - ../infrastructure/init-databases.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-iryss}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - iryss
+
+  redis:
+    image: redis:7-alpine
+    restart: always
+    volumes:
+      - iryss_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - iryss
+
+  api-server:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.api
+    restart: always
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-iryss}:${POSTGRES_PASSWORD}@postgres:5432/iryss_marketplace
+      REDIS_URL: redis://redis:6379
+      MEDUSA_WORKER_MODE: server
+      NODE_ENV: production
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET}
+      COOKIE_SECRET: ${COOKIE_SECRET:?Set COOKIE_SECRET}
+      STORE_CORS: ${STORE_CORS:-https://iryss.com}
+      ADMIN_CORS: ${ADMIN_CORS:-https://admin.iryss.com}
+      VENDOR_CORS: ${VENDOR_CORS:-https://iryssbrands.com}
+      AUTH_CORS: ${AUTH_CORS:-https://iryss.com,https://admin.iryss.com,https://iryssbrands.com,https://iryssretail.com}
+    ports:
+      - "9000:9000"
+    networks:
+      - iryss
+
+  api-worker:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.api
+    restart: always
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-iryss}:${POSTGRES_PASSWORD}@postgres:5432/iryss_marketplace
+      REDIS_URL: redis://redis:6379
+      MEDUSA_WORKER_MODE: worker
+      DISABLE_MEDUSA_ADMIN: "true"
+      NODE_ENV: production
+      JWT_SECRET: ${JWT_SECRET}
+      COOKIE_SECRET: ${COOKIE_SECRET}
+    networks:
+      - iryss
+
+  b2c-storefront:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.b2c
+    restart: always
+    environment:
+      NEXT_PUBLIC_MEDUSA_BACKEND_URL: ${MEDUSA_BACKEND_URL:-http://api-server:9000}
+      NODE_ENV: production
+    ports:
+      - "3000:3000"
+    networks:
+      - iryss
+
+volumes:
+  iryss_pg_data:
+  iryss_redis_data:
+
+networks:
+  iryss:
+    driver: bridge
