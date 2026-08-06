@@ -1,325 +1,156 @@
-# IRYSS Platform
+<br>
+<p align="center">
+  <a href="https://github.com/mercurjs/mercur">
+    <img src="https://cdn.prod.website-files.com/6790aeffc4b432ccaf1b56e5/67a225dc6fa298afc1cc4ae6_Mercur%20Cover.png" alt="Mercur">
+  </a>
+</p>
 
-Multi-country B2C/B2B marketplace built on **Mercur 2.2.0** (Medusa 2.17.2), with Payload CMS as PIM, OpenSearch for semantic search, and dedicated Brand and Reseller portals.
+<h1 align="center">
+  Mercur
+</h1>
+
+<div align="center">
+  <h3>The open-source marketplace platform. A Mirakl alternative.</h3>
+</div>
+
+<h4 align="center">
+  <a href="https://mercurjs.com/">Website</a> ·
+  <a href="https://docs.mercurjs.com">Documentation</a> ·
+  <a href="https://demo.mercurjs.com/">Live Demo</a> ·
+  <a href="https://discord.gg/hnZBzc4NJU">Discord</a>
+</h4>
+
+<div align="center">
+
+  [![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/mercurjs/mercur/tree/main?tab=MIT-1-ov-file)
+  [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/mercurjs/mercur/issues/new/choose)
+  [![Support](https://img.shields.io/badge/support-contact%20author-blueviolet.svg)](https://www.mercurjs.com/contact)
+  [![GitHub closed issues](https://img.shields.io/github/issues-closed/mercurjs/mercur)](https://github.com/mercurjs/mercur/issues?q=is%3Aissue%20state%3Aclosed)
+    <br>
+    <br>
+  [![Discord](https://img.shields.io/badge/Discord-Join%20Chat-5865F2?logo=discord&logoColor=white)](https://discord.gg/hnZBzc4NJU)
+
+</div>
+
+## What is Mercur
+
+<img width="100%" alt="demo-screen" src="https://github.com/user-attachments/assets/8b73163c-230a-46c4-b86c-fed4fa339964" />
+
+**Mercur** is an open-source, headless platform for building multi-vendor marketplaces. Add vendor onboarding, multi-vendor catalogs, offers, commissions, and automated payouts on top of a commerce core you can change at its foundation. Run B2C, B2B, and hybrid marketplaces without choosing between a profit-draining SaaS platform and a build from scratch.
+
+- **Own your marketplace, no fees**: Self-host on your own infrastructure with full source access. No percentage of GMV, no per-transaction cut, no vendor lock-in — your data, your customers, and your roadmap stay yours.
+- **Built for the marketplace model**: Vendor onboarding, multi-vendor catalogs, offers, commissions, and automated payouts are built in — multiple sellers can list offers against the same product, so you're not rebuilding marketplace logic on top of a single-seller commerce engine.
+- **Headless and customizable, no forks**: TypeScript, event-driven, and API-first — serve any storefront or frontend. Extend or override workflows, products, and vendor rules through a composable architecture built for the most complex B2B and multi-vendor models, without patching the core.
+- **Standing on [Medusa](https://medusajs.com/)**: Inherit a mature, battle-tested commerce core — catalog, orders, payments, shipping, tax, and stock — instead of reinventing it. Mercur adds the marketplace layer on top of **[Medusa](https://medusajs.com/)**.
+- **Production-ready and AI-native**: Run real marketplaces in production today, on an architecture designed for AI-assisted development — an introspectable, API-first stack that works hand in hand with your AI coding tools.
+
+![Mercur Use Cases](https://cdn.prod.website-files.com/6790aeffc4b432ccaf1b56e5/67b46aa08180d5b8499c6a15_Use-cases.jpg)
+
+<!-- GETTING STARTED -->
+
+## Getting Started
+
+To get a local marketplace up and running, please follow these simple steps.
+
+### Prerequisites
+
+Here's what you need to run Mercur.
+
+- Node.js (Version: >=20.x)
+- PostgreSQL (Version: >=13.x)
+- Redis
+- Bun _(recommended)_
+
+> If you want to enable any of the available integrations (e.g. Stripe Connect payouts, Resend email, Algolia/Meilisearch search), you may want to obtain additional credentials for each one and add them to your `.env` file.
+
+### Setup
+
+1. Create a new Mercur project
+
+   ```sh
+   bun create mercur-app@latest my-marketplace
+   ```
+
+2. Start the development server
+
+   ```sh
+   cd my-marketplace
+   bun run dev
+   ```
+
+3. Access your marketplace
+   - Backend API: `http://localhost:9000`
+   - Admin Panel: `http://localhost:9000/dashboard`
+   - Vendor Panel: `http://localhost:9000/seller`
+
+   Your marketplace comes seeded with a demo store out of the box — a ready-to-go seller (`seller@mercur.dev` / `supersecret`) with a full catalog of products and offers, so you can explore the admin and vendor panels immediately. Sign in to the Vendor Panel with those credentials, or manage everything from the Admin Panel.
+
+### Built With
+
+- [Medusa.js](https://medusajs.com/)
+- [TypeScript](https://www.typescriptlang.org/)
+- [React.js](https://reactjs.org/)
+- [Vite](https://vitejs.dev/)
+- [Node.js](https://nodejs.org/)
+- [PostgreSQL](https://www.postgresql.org/)
+- [Redis](https://redis.io/)
 
 ## Architecture
 
-```
-iryss-platform/
-├── packages/
-│   ├── api/              Mercur/Medusa backend (marketplace core)
-│   ├── contracts/         Shared types, Zod schemas, event taxonomy
-│   ├── ui/               Shared design system (Medusa UI + IRYSS extensions)
-│   ├── config/           Environment loading and validation
-│   ├── api-client/       Typed HTTP client for the marketplace API
-│   └── test-utils/       Shared testing utilities
-│
-├── apps/
-│   ├── admin/            Admin Portal (Mercur admin dashboard)           :7000
-│   ├── vendor/           Brand Portal (Mercur vendor dashboard)          :7001
-│   ├── b2c-storefront/   B2C marketplace (Next.js, subdirectory i18n)   :3000
-│   ├── b2b-storefront/   B2B wholesale marketplace (Next.js)            :3001
-│   ├── reseller-portal/  Reseller Portal (Vite + React)                 :3002
-│   ├── payload-cms/      PIM + CMS (Payload 3)                          :3003
-│   ├── content-platform/ Content library API (NestJS)                   :4000
-│   └── shopify-connector/ Shopify integration API (NestJS)              :4001
-│
-├── infrastructure/       Terraform (GCP)
-├── plans/               Technical planning documents
-└── docs/                Source specification documents
-```
-
-## Prerequisites
-
-| Tool | Version | Install |
-|---|---|---|
-| **Node.js** | 20 LTS | [nodejs.org](https://nodejs.org/) or `nvm install 20` |
-| **Bun** | 1.3+ | [bun.sh](https://bun.sh/) or `curl -fsSL https://bun.sh/install \| bash` |
-| **Docker** | Latest | [docker.com](https://www.docker.com/) |
-| **PostgreSQL** | 15+ | Via Docker or local install |
-| **Redis/Valkey** | 7+ | Via Docker or local install |
-
-## Quick Start
-
-### 1. Install dependencies
-
-```bash
-bun install
-```
-
-### 2. Start infrastructure (PostgreSQL + Redis)
-
-```bash
-docker compose up -d
-```
-
-This starts PostgreSQL on **port 5433** (to avoid conflicts with existing PostgreSQL on 5432).
-
-**Redis:** If you have [Memurai](https://www.memurai.com/) installed (Windows Redis-compatible server), it runs on `localhost:6379` by default — no Docker Redis needed. The API is already configured to use `localhost:6379`.
-
-### 3. Configure environment
-
-```bash
-# The API package has a pre-configured .env for local development
-# For other apps, copy their .env.example files:
-cp apps/b2c-storefront/.env.local.example apps/b2c-storefront/.env.local
-cp apps/b2b-storefront/.env.local.example apps/b2b-storefront/.env.local
-cp apps/payload-cms/.env.example apps/payload-cms/.env
-```
-
-### 4. Set up the database
-
-```bash
-# Run Medusa migrations
-cd packages/api
-bun run db:migrate
-bun run seed
-cd ../..
-```
-
-### 5. Start development
-
-```bash
-# Start everything
-bun run dev
-
-# Or start specific services
-bun run dev:api          # Medusa API only (port 9000)
-bun run dev:admin        # Admin Portal + API (ports 7000 + 9000)
-bun run dev:vendor       # Brand Portal + API (ports 7001 + 9000)
-bun run dev:b2c          # B2C Storefront (port 3000)
-bun run dev:b2b          # B2B Storefront (port 3001)
-bun run dev:reseller     # Reseller Portal (port 3002)
-bun run dev:payload      # Payload CMS (port 3003)
-bun run dev:content      # Content Platform (port 4000)
-bun run dev:connector    # Shopify Connector (port 4001)
-```
-
-## Service URLs (Development)
-
-| Service | URL | Purpose |
-|---|---|---|
-| **Medusa API** | http://localhost:9000 | Marketplace backend API |
-| **Admin Portal** | http://localhost:9000/dashboard | Mercur Admin (served by Medusa) |
-| **Brand Portal** | http://localhost:9000/seller | Mercur Vendor (served by Medusa) |
-| **Admin Portal (dev)** | http://localhost:7000 | Admin with hot reload |
-| **Brand Portal (dev)** | http://localhost:7001 | Brand Portal with hot reload |
-| **B2C Storefront** | http://localhost:3000 | Consumer marketplace |
-| **B2B Storefront** | http://localhost:3001 | Trade/wholesale marketplace |
-| **Reseller Portal** | http://localhost:3002 | Reseller management |
-| **Payload CMS** | http://localhost:3003/admin | PIM + CMS admin |
-| **Content Platform** | http://localhost:4000 | Content library API |
-| **Shopify Connector** | http://localhost:4001 | Shopify integration API |
+Mercur is modular. Each piece is a separate, independently deployable app that talks to the core over APIs.
 
-## Per-Actor Development Guide
+- **Mercur Core**: the marketplace engine on top of Medusa, with vendors, commissions, payouts, and multi-vendor primitives.
+- **Admin Panel**: marketplace operators manage vendors, catalog, categories, commissions, and rules.
+- **Vendor Panel**: sellers manage their products, orders, and payouts.
+- **Storefronts**: customer-facing B2C/B2B apps with multi-vendor browsing, cart, and checkout.
 
-### Admin (Platform Operator)
+![Mercur](https://cdn.prod.website-files.com/6790aeffc4b432ccaf1b56e5/67a1020f202572832c954ead_6b96703adfe74613f85133f83a19b1f0_Fleek%20Tilt%20-%20Readme.png)
 
-**Entry point:** http://localhost:9000/dashboard (or http://localhost:7000 for dev with hot reload)
+## What's in this repo
 
-The Admin Portal manages the entire marketplace:
-- **Global view:** Consolidated data across all storefronts and channels
-- **B2C management:** Consumer marketplace operations, with country drill-down (France, Italy, UK, etc.)
-- **B2B management:** Wholesale/trade marketplace operations
-- **Seller/brand management:** Approve sellers, manage commissions, review products
-- **Product approvals:** Review AI-enriched products before publishing
-- **Order management:** View and manage orders across all sellers and storefronts
+This is the Mercur development monorepo: the `@mercurjs/core` plugin, the React + Vite admin and vendor dashboards, the `@mercurjs/cli`, the typed API client, the dashboard SDK, the Stripe Connect payout provider, and the cross-package integration suites. If you just want to build a marketplace, run `bun create mercur-app@latest` (see [Getting Started](#getting-started)) - clone this repo only when you want to contribute to Mercur itself.
 
-**Default admin credentials** (after running `seed`):
-- Created during Medusa setup — check the seed script output for admin login details
+## Deployment
 
-**Key files:**
-- `apps/admin/` — Admin Portal frontend (Mercur admin extensions)
-- `packages/api/src/api/admin/` — Admin API routes
-- `packages/api/src/modules/` — Custom Medusa modules
+Because Mercur is a plain Node.js application backed by PostgreSQL and Redis, it deploys the same way whether you ship it as a container, orchestrate it with Kubernetes, push it to a managed cloud, or lock it inside an air-gapped network. There's no proprietary runtime to adopt and no hosting tier you're forced onto, so where your marketplace lives and where its data sits stay entirely under your control. Prefer a managed backend? Mercur also deploys to [Medusa Cloud](https://medusajs.com/pricing/) with push-to-deploy and auto-scaling.
 
-### Brand (Seller)
+## License
 
-**Entry point:** http://localhost:9000/seller (or http://localhost:7001 for dev with hot reload)
+This repository is **Mercur core**, licensed under the [MIT License](./LICENSE) and fully open source. It's the marketplace engine on top of [Medusa](https://medusajs.com) — vendors, multi-vendor catalogs, offers, commissions, and payouts, with the admin and vendor dashboards and APIs to run a marketplace yourself.
 
-The Brand Portal is where sellers manage their marketplace presence:
-- **Product management:** Create offers against master products, manage inventory
-- **Order management:** View and fulfil orders
-- **Accounting:** Access invoices, credit notes, and financial documents (from Odoo)
-- **Analytics:** Performance data across B2C, B2B, and country storefronts
-- **Content:** Upload product media, manage brand pages (Content Platform integration)
-- **Shopify connection:** Connect Shopify store for product import (when Connector is live)
+**Mercur Enterprise** adds a licensed suite of advanced modules (EAN matching & deduplication, a Buy Box / winning-offer engine, master-data governance, multi-channel stock sync, automated split payouts, vendor KYC, and much more), all maintained, tested, and upgraded by the core team. You deploy and run Enterprise on your own infrastructure, exactly like the open-source core.
 
-**Demo seller credentials** (after running `seed`):
-- Email: `seller@mercur.dev`
-- Password: `supersecret`
+It comes backed by a direct support relationship with the people who build the platform: a dedicated support channel, contractual SLAs with guaranteed response times, prioritized bug fixes and security patches, and hands-on onboarding and architecture guidance to get you to production. Higher support tiers add priority escalation and a named technical contact.
 
-**Key files:**
-- `apps/vendor/` — Brand Portal frontend (Mercur vendor extensions)
-- `packages/api/src/api/vendor/` — Vendor API routes
+[Book Mercur Enterprise demo](https://www.mercurjs.com/enterprise).
 
-### Reseller
+## Professional services
 
-**Entry point:** http://localhost:3002
+Mercur is built and maintained by [Rigby](https://rigbyjs.com), a team that has designed, built, and launched multi-vendor marketplaces in production. If you'd rather not do it alone, we work alongside your engineers — from architecture reviews and integrating Mercur with your existing stack to hardening, scaling, and getting your marketplace live on schedule. [Talk to our team](https://www.mercurjs.com/contact).
 
-The Reseller Portal is a custom IRYSS application for approved resellers:
-- **Public landing:** Acquisition and onboarding at the root URL
-- **Application:** Apply to become a reseller at `/apply`
-- **Portal:** Authenticated reseller dashboard at `/portal`
-- **Product discovery:** Browse and select approved products from the catalogue
-- **Shopify integration:** Connect Shopify store to push selected products (coming soon)
-- **Order tracking:** View stock levels and order information
+## Contribution
 
-**Key files:**
-- `apps/reseller-portal/` — Reseller Portal frontend (Vite + React)
-- Reseller data model is defined in `packages/api/src/modules/`
+Mercur is an Open Source project and we encourage everyone to help us making it better. If you are interested in contributing to the project, please read our [Contributing Guide](https://raw.githubusercontent.com/mercurjs/mercur/refs/heads/new/CONTRIBUTING.md) and [Code of Conduct](https://raw.githubusercontent.com/mercurjs/mercur/refs/heads/new/CODE_OF_CONDUCT.md).
 
-### Customer (B2C)
+If you have any questions about contributing, please join our [Discord server](https://discord.gg/hnZBzc4NJU) - we are happy to help you!
 
-**Entry point:** http://localhost:3000
+Discovered a 🐜 or have feature suggestion? Feel free to [create an issue](https://github.com/mercurjs/mercur/issues/new/choose) on Github.
 
-The consumer marketplace with subdirectory-based country storefronts:
-- `http://localhost:3000` — Default (UK/global) storefront
-- `http://localhost:3000/fr` — France storefront
-- `http://localhost:3000/it` — Italy storefront
-- Browse products, add to cart, checkout
-- User accounts and order history
+## Upgrades
 
-**Key files:**
-- `apps/b2c-storefront/` — Next.js B2C storefront
-- `apps/b2c-storefront/src/middleware.ts` — Locale/storefront routing
+Follow the [Release Notes](https://github.com/mercurjs/mercur/releases) to keep your Mercur marketplace up-to-date.
 
-### Trade Buyer (B2B)
+## Contributors
 
-**Entry point:** http://localhost:3001
+<a href="https://github.com/mercurjs/mercur/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=mercurjs/mercur" alt="Mercur contributors" />
+</a>
 
-The wholesale marketplace for professional purchasers:
-- Account-gated access
-- Trade pricing and bulk ordering
-- Business account management
+## Star history
 
-**Key files:**
-- `apps/b2b-storefront/` — Next.js B2B storefront
-
-### Content Manager
-
-**Entry point:** http://localhost:3003/admin (Payload CMS)
-
-The PIM and CMS for product onboarding and content management:
-- **Product onboarding:** Import, enrich, translate, review, approve products
-- **Media management:** Product images and brand assets
-- **Brand pages:** Editorial content for brand stories
-- **CMS content:** Marketplace editorial, SEO content, localised pages
-
-**Key files:**
-- `apps/payload-cms/` — Payload CMS configuration
-- `apps/payload-cms/src/collections/` — Collection definitions (Products, Media, Brands)
-
-## Workspace Commands
-
-```bash
-# Build all packages and apps
-bun run build
-
-# Run linting across the workspace
-bun run lint
-
-# Type-check all packages
-bun run check-types
-
-# Run tests
-bun run test
-
-# Format code
-bun run format
-
-# Clean all build artifacts
-bun run clean
-```
-
-## Mercur Blocks
-
-Pull blocks from the Mercur registry to add marketplace features:
-
-```bash
-cd packages/api
-npx mercurjs add <block-name>
-```
-
-Available blocks include: `requests`, `product-import-export`, `notifications`, `team-management`, `reviews`, `wishlist`.
-
-Block-sourced files are committed to the repo. Keep them in identifiable directories so re-pulls produce readable diffs.
-
-## Database Setup
-
-The platform uses four separate PostgreSQL databases:
-
-| Database | Owner | Purpose |
-|---|---|---|
-| `iryss_marketplace` | Medusa/Mercur API | Commerce core — products, orders, payments |
-| `iryss_payload` | Payload CMS | PIM data + CMS content |
-| `iryss_content` | Content Platform | Videos, channels, playlists |
-| `iryss_connector` | Shopify Connector | Store connections, sync state |
-
-**Payload uses a separate database from Medusa** — they have different migration systems (MikroORM vs Drizzle) and overlapping table names.
-
-## Environment Variables
-
-### Medusa API (`packages/api/.env`)
-
-| Variable | Description |
-|---|---|
-| `DATABASE_URL` | PostgreSQL connection string for marketplace DB |
-| `REDIS_URL` | Redis/Valkey connection string |
-| `JWT_SECRET` | JWT signing secret (min 16 chars) |
-| `COOKIE_SECRET` | Cookie signing secret (min 16 chars) |
-| `STORE_CORS` | Allowed origins for store API |
-| `ADMIN_CORS` | Allowed origins for admin API |
-| `VENDOR_CORS` | Allowed origins for vendor API |
-| `AUTH_CORS` | Allowed origins for auth endpoints |
-
-### Storefronts (`apps/b2c-storefront/.env.local`)
-
-| Variable | Description |
-|---|---|
-| `NEXT_PUBLIC_MEDUSA_BACKEND_URL` | Medusa API URL |
-| `NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY` | Publishable API key |
-
-## Production Domains
-
-| Domain | Service |
-|---|---|
-| `iryss.com` | B2C marketplace (with `/fr`, `/it` country paths) |
-| `trade.iryss.com` | B2B wholesale marketplace |
-| `admin.iryss.com` | Admin Portal |
-| `iryssbrands.com` | Brand Portal (public + authenticated) |
-| `iryssretail.com` | Reseller Portal (public + authenticated) |
-| `api.iryss.com` | Marketplace API |
-| `cms.iryss.com` | Payload CMS |
-| `cdn.iryss.com` | Media CDN (Bunny) |
-| `t.iryss.com` | Server-side GTM |
-
-## Tech Stack
-
-| Layer | Technology |
-|---|---|
-| **Marketplace** | Mercur 2.2.0, Medusa 2.17.2 |
-| **Admin/Brand Portals** | Mercur dashboards (Vite + React) |
-| **Storefronts** | Next.js 15 (App Router) |
-| **Reseller Portal** | Vite + React + React Router |
-| **PIM/CMS** | Payload 3 |
-| **Content Platform** | NestJS |
-| **Shopify Connector** | NestJS + Shopify React Router template |
-| **Database** | PostgreSQL 15+ (Cloud SQL) |
-| **Cache/Queues** | Redis/Valkey (Memorystore) |
-| **Search** | OpenSearch (Aiven) with semantic vectors |
-| **Media** | Bunny CDN + Bunny Stream (VOD) |
-| **Infrastructure** | Google Cloud Run, Terraform |
-| **CI/CD** | GitHub Actions |
-| **Monitoring** | Sentry, Google Cloud Monitoring, PostHog |
-| **Payments** | Stripe Connect |
-| **Accounting** | Odoo Enterprise |
-| **Shipping** | Sendcloud |
-
-## Documentation
-
-- [Technical Plan v2](plans/2026-07-24-iryss-platform-technical-plan-v2.md) — Full architecture and implementation plan
-- [Technical Plan v1](plans/2026-07-20-iryss-platform-technical-plan.md) — Original technical plan
-- [Marketplace Stack](docs/markedplace-stack.md) — Source specification
-- [Shopify Connector](docs/shopifiy_connector.md) — Connector specification
-- [Content Platform](docs/youtube-style.md) — Content Platform specification
+<a href="https://star-history.com/#mercurjs/mercur&Date">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="./.github/assets/star-history-dark.svg" />
+    <img src="./.github/assets/star-history.svg" alt="Star History Chart" width="70%" />
+  </picture>
+</a>

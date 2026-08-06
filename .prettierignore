@@ -1,8 +1,0 @@
-node_modules
-dist
-.next
-.medusa
-.mercur
-.turbo
-coverage
-pnpm-lock.yaml
