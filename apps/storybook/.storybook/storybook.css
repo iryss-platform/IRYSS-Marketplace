@@ -1,0 +1,3 @@
+/* Import the storefront color tokens and global styles */
+@import "../../../apps/storefront/src/app/colors.css";
+@import "../../../apps/storefront/src/app/globals.css";
