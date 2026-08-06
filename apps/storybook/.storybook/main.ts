@@ -3,15 +3,10 @@ import path from 'path'
 
 const config: StorybookConfig = {
   stories: [
-    // B2C Storefront components
     '../../../apps/storefront/src/components/**/*.stories.@(ts|tsx)',
-    // Admin panel components
     '../../../packages/admin/src/**/*.stories.@(ts|tsx)',
-    // Vendor panel components
     '../../../packages/vendor/src/**/*.stories.@(ts|tsx)',
-    // Dashboard shared components
     '../../../packages/dashboard-shared/src/**/*.stories.@(ts|tsx)',
-    // Local stories (welcome, overview)
     '../stories/**/*.stories.@(ts|tsx)',
   ],
   addons: [
@@ -32,13 +27,17 @@ const config: StorybookConfig = {
         ...config.esbuild,
         jsx: 'automatic',
       },
+      define: {
+        ...config.define,
+        'process.env': JSON.stringify({}),
+      },
       css: {
         postcss: {
           plugins: [
-            require('tailwindcss')({
-              config: path.resolve(__dirname, '../tailwind.config.ts'),
+            (await import('tailwindcss')).default({
+              config: path.resolve(__dirname, '../tailwind.config.cjs'),
             }),
-            require('autoprefixer')(),
+            (await import('autoprefixer')).default(),
           ],
         },
       },
