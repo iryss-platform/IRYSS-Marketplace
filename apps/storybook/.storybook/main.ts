@@ -30,6 +30,7 @@ const config: StorybookConfig = {
       define: {
         ...config.define,
         'process.env': JSON.stringify({}),
+        'process.env.NODE_ENV': JSON.stringify('production'),
       },
       css: {
         postcss: {
@@ -43,9 +44,21 @@ const config: StorybookConfig = {
       },
       resolve: {
         ...config.resolve,
+        dedupe: ['react', 'react-dom', 'react-router-dom'],
         alias: {
           ...config.resolve?.alias,
           '@': storefrontSrc,
+          'next/link': path.resolve(__dirname, '../stubs/next-link.tsx'),
+          'next/navigation': path.resolve(__dirname, '../stubs/next-navigation.tsx'),
+          'next/image': path.resolve(__dirname, '../stubs/next-image.tsx'),
+          'virtual:mercur/config': path.resolve(__dirname, '../stubs/mercur-config.ts'),
+        },
+      },
+      // Force Rollup to resolve through node_modules properly
+      build: {
+        ...config.build,
+        commonjsOptions: {
+          include: [/node_modules/],
         },
       },
     }

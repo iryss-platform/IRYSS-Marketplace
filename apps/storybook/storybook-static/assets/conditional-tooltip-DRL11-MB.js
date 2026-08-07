@@ -1,0 +1,1 @@
+import{j as s}from"./jsx-runtime-B22yQkQ1.js";import{T as i}from"./tooltip-COW0t6El.js";const a=({children:o,showTooltip:t=!1,...e})=>t?s.jsx(i,{...e,children:o}):o;a.__docgenInfo={description:"",methods:[],displayName:"ConditionalTooltip",props:{showTooltip:{defaultValue:{value:"false",computed:!1},required:!1}}};export{a as C};

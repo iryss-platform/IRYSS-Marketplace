@@ -1,0 +1,1 @@
+import{c as o}from"./index-6gKHwO9i.js";import{r as s}from"./index-CIdkRTUq.js";import{c as n}from"./clx-ypaMnjOU.js";const c=o({base:"font-sans font-medium",variants:{level:{h1:"h1-core",h2:"h2-core",h3:"h3-core"}},defaultVariants:{level:"h1"}}),f=({level:a="h1",className:e,...r})=>{const t=a||"h1";return s.createElement(t,{className:n(c({level:a}),e),...r})};export{f as H};

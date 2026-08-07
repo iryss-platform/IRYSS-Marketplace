@@ -1,0 +1,14 @@
+import{j as e}from"./jsx-runtime-B22yQkQ1.js";import{I as c}from"./next-image-BwaR5r-i.js";import{t as h}from"./tailwind.config-Dv2zz2pc.js";import{a as g}from"./index-BlYTR7gl.js";import{L as u}from"./next-link-DiJkJLFX.js";import"./index-CIdkRTUq.js";const p=({image:t,heading:s,paragraph:m,buttons:n})=>e.jsxs("section",{className:"w-full flex container mt-5 flex-col lg:flex-row text-primary",children:[e.jsx(c,{src:decodeURIComponent(t),width:700,height:600,alt:`Hero banner - ${s}`,className:"w-full order-2 lg:order-1",priority:!0,fetchPriority:"high",quality:50,sizes:"(min-width: 1024px) 50vw, 100vw"}),e.jsxs("div",{className:"w-full lg:order-2",children:[e.jsx("div",{className:"border rounded-sm w-full px-6 flex items-end h-[calc(100%-144px)]",children:e.jsxs("div",{children:[e.jsx("h2",{className:"font-bold mb-6 uppercase display-md max-w-[652px] text-4xl md:text-5xl leading-tight",children:s}),e.jsx("p",{className:"text-lg mb-8",children:m})]})}),n.length&&e.jsx("div",{className:"h-[72px] lg:h-[144px] flex font-bold uppercase",children:n.map(({label:a,path:i})=>e.jsxs(u,{href:i,className:"group flex border rounded-sm h-full w-1/2 bg-content hover:bg-action hover:text-tertiary transition-all duration-300 p-6 justify-between items-end","aria-label":a,title:a,children:[e.jsxs("span",{children:[e.jsx("span",{className:"group-hover:inline-flex hidden",children:"#"}),a]}),e.jsx(g,{color:h.theme.extend.backgroundColor.primary,"aria-hidden":!0})]},i))})]})]});p.__docgenInfo={description:"",methods:[],displayName:"Hero",props:{image:{required:!0,tsType:{name:"string"},description:""},heading:{required:!0,tsType:{name:"string"},description:""},paragraph:{required:!0,tsType:{name:"string"},description:""},buttons:{required:!0,tsType:{name:"Array",elements:[{name:"signature",type:"object",raw:"{ label: string; path: string }",signature:{properties:[{key:"label",value:{name:"string",required:!0}},{key:"path",value:{name:"string",required:!0}}]}}],raw:"{ label: string; path: string }[]"},description:""}}};const v={component:p,decorators:t=>e.jsx(t,{})},r={args:{heading:"Snag your style in a flash",paragraph:"Buy, sell, and discover pre-loved from the trendiest brands.",image:"/images/hero/Image.jpg",buttons:[{label:"Buy now",path:"#"},{label:"Sell now",path:"3"}]}};var o,l,d;r.parameters={...r.parameters,docs:{...(o=r.parameters)==null?void 0:o.docs,source:{originalSource:`{
+  args: {
+    heading: "Snag your style in a flash",
+    paragraph: "Buy, sell, and discover pre-loved from the trendiest brands.",
+    image: "/images/hero/Image.jpg",
+    buttons: [{
+      label: "Buy now",
+      path: "#"
+    }, {
+      label: "Sell now",
+      path: "3"
+    }]
+  }
+}`,...(d=(l=r.parameters)==null?void 0:l.docs)==null?void 0:d.source}}};const N=["FirstStory"];export{r as FirstStory,N as __namedExportsOrder,v as default};

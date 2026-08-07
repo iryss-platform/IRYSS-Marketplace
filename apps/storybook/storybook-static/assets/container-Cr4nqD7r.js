@@ -1,0 +1,1 @@
+import{r}from"./index-CIdkRTUq.js";import{c as t}from"./clx-ypaMnjOU.js";const s=r.forwardRef(({className:e,...a},o)=>r.createElement("div",{ref:o,className:t("shadow-elevation-card-rest bg-ui-bg-base w-full rounded-lg px-6 py-4",e),...a}));s.displayName="Container";export{s as C};

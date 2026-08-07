@@ -1,0 +1,1 @@
+import{j as e}from"./jsx-runtime-B22yQkQ1.js";import{R as r}from"./index-CIdkRTUq.js";const s=r.forwardRef(({href:o,children:i,...t},a)=>e.jsx("a",{ref:a,href:typeof o=="string"?o:"#",...t,children:i}));s.displayName="Link";s.__docgenInfo={description:"",methods:[],displayName:"Link"};export{s as L};

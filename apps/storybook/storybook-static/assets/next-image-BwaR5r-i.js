@@ -1,0 +1,1 @@
+import{j as a}from"./jsx-runtime-B22yQkQ1.js";const g=({src:t,alt:e,width:i,height:d,fill:o,...m})=>a.jsx("img",{src:typeof t=="string"?t:(t==null?void 0:t.src)||"",alt:e||"",width:o?void 0:i,height:o?void 0:d,style:o?{objectFit:"cover",width:"100%",height:"100%"}:void 0,...m});g.__docgenInfo={description:"",methods:[],displayName:"Image"};export{g as I};
