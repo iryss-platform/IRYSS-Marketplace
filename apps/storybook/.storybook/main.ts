@@ -33,14 +33,7 @@ const config: StorybookConfig = {
         'process.env.NODE_ENV': JSON.stringify('production'),
       },
       css: {
-        postcss: {
-          plugins: [
-            (await import('tailwindcss')).default({
-              config: path.resolve(__dirname, '../tailwind.config.cjs'),
-            }),
-            (await import('autoprefixer')).default(),
-          ],
-        },
+        postcss: path.resolve(__dirname, '..'),
       },
       resolve: {
         ...config.resolve,
